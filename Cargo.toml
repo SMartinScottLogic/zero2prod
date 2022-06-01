@@ -3,7 +3,25 @@ name = "zero2prod"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+path = "src/lib.rs"
+
+# Notice the double square brackets: it's an array in TOML's syntax.
+# We can only have one library in a project, but we can have multiple binaries!
+# If you want to manage multiple libraries in the same repository
+# have a look at the workspace feature - we'll cover it later on.
+[[bin]]
+path = "src/main.rs"
+name = "zero2prod"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 rocket = "0.5.0-rc.2"                  # Web framework for nightly with a focus on ease-of-use, expressibility, and speed.
+
+[dev-dependencies]
+tokio = "1.18.2"                  # An event-driven, non-blocking I/O platform for writing asynchronous I/O backed applications. 
+tokio-test = "0.4.2"                # Testing utilities for Tokio- and futures-based code 
+reqwest = "0.11.10"                               # higher level HTTP client library
+reqwest-middleware = "0.1.6"                      # Wrapper around reqwest to allow for client middleware chains.
+reqwest-retry = "0.1.5"         # Retry middleware for reqwest.
