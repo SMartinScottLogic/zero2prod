@@ -1,4 +1,4 @@
-use std::{borrow::Cow, path::PathBuf};
+use std::path::PathBuf;
 
 use rocket::http::Status;
 
@@ -9,11 +9,14 @@ extern crate rocket;
 fn hello(name: PathBuf) -> String {
     let name = name
         .iter()
-        .next()
         .map(|s| s.to_string_lossy())
-        .unwrap_or_else(|| Cow::from("World"));
-
-    format!("Hello, {name}!")
+        .collect::<Vec<_>>()
+        .join(" ");
+    if name.is_empty() {
+        "Hello world!".to_string()
+    } else {
+        format!("Hello, {name}!")
+    }
 }
 
 #[get("/health_check")]
@@ -32,6 +35,18 @@ mod test {
     use crate::PathBuf;
     use rocket::http::Status;
     use rocket::local::blocking::Client;
+
+    #[test]
+    fn actual_path() {
+        let client = Client::tracked(rocket()).expect("valid rocket instance");
+        let response = client.get(uri!("/Another/User")).dispatch();
+        assert_eq!(response.status(), Status::Ok);
+        assert!(
+            response.body().is_some(),
+            "there should be a response payload"
+        );
+        assert_eq!(response.into_string().unwrap(), "Hello, Another User!");
+    }
 
     #[test]
     fn hello_world() {
@@ -53,7 +68,7 @@ mod test {
             response.body().is_some(),
             "there should be a response payload"
         );
-        assert_eq!(response.into_string().unwrap(), "Hello, World!");
+        assert_eq!(response.into_string().unwrap(), "Hello world!");
     }
 
     #[test]
