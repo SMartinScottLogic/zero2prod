@@ -1,7 +1,12 @@
-use rocket::launch;
+use rocket::{launch, Config};
 use zero2prod::run;
 
 #[launch]
 fn rocket() -> _ {
-    run()
+    let port = 8080;
+    let config = Config {
+        port,
+        ..Config::debug_default()
+    };
+    run().configure(&config)
 }

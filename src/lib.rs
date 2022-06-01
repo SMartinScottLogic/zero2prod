@@ -1,9 +1,17 @@
 use std::path::PathBuf;
 
+use rocket::form::Form;
 use rocket::http::Status;
+use rocket::response::status;
+use rocket::Request;
 
 #[macro_use]
 extern crate rocket;
+
+#[catch(422)]
+fn unprocessable_error(_req: &Request) -> status::BadRequest<String> {
+    status::BadRequest(Some("unprocessable".to_string()))
+}
 
 #[get("/<name..>")]
 fn hello(name: PathBuf) -> String {
@@ -24,8 +32,22 @@ fn health_check() -> Status {
     Status::Ok
 }
 
+#[derive(FromForm)]
+struct FormData<'r> {
+    name: &'r str,
+    email: &'r str,
+}
+
+#[post("/subscriptions", data = "<form>")]
+fn subscribe(form: Form<FormData<'_>>) -> Status {
+    println!("{} {}", form.name, form.email);
+    Status::Ok
+}
+
 pub fn run() -> rocket::Rocket<rocket::Build> {
-    rocket::build().mount("/", routes![hello, health_check])
+    rocket::build()
+        .mount("/", routes![hello, health_check, subscribe])
+        .register("/", catchers![unprocessable_error])
 }
 
 #[cfg(test)]
