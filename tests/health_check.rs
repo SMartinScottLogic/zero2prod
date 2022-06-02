@@ -1,13 +1,46 @@
+#[macro_use]
+extern crate lazy_static;
+
+use std::{
+    process::Child,
+    sync::{Arc, Mutex},
+};
+
+use ctor::{ctor, dtor};
 use reqwest_middleware::ClientBuilder;
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
-use rocket::Config;
-use zero2prod::run;
+
+static PORT: u16 = 8080;
+
+lazy_static! {
+    static ref APP: Arc<Mutex<Option<Child>>> = { Arc::new(Mutex::new(None)) };
+}
+
+#[ctor]
+fn spawn_rocket() {
+    println!("span rocket");
+    let root = std::env::current_exe().unwrap();
+    let mut root = root.parent().expect("executable's directory").to_path_buf();
+    if root.ends_with("deps") {
+        root.pop();
+    }
+    root.push("zero2prod");
+    let mut app_lock = APP.lock().unwrap();
+    *app_lock = Some(std::process::Command::new(root).spawn().unwrap());
+}
+
+#[dtor]
+fn shutdown_rocket() {
+    let mut app_lock = APP.lock().unwrap();
+    if let Some(mut app) = app_lock.take() {
+        app.kill().expect("shutting down rocket");
+        println!("shutdown rocket");
+    }
+}
 
 #[tokio::test]
 async fn health_check_works() {
     // Arrange
-    let port: u16 = 8080;
-    spawn_app(port).await;
     // Perform HTTP requests against our application, using reqwest with retry.
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
     let client = ClientBuilder::new(reqwest::Client::new())
@@ -16,7 +49,7 @@ async fn health_check_works() {
 
     // Act
     let response = client
-        .get(&format!("http://127.0.0.1:{port}/health_check"))
+        .get(&format!("http://127.0.0.1:{PORT}/health_check"))
         .send()
         .await
         .expect("Failed to execute request.");
@@ -28,8 +61,6 @@ async fn health_check_works() {
 #[tokio::test]
 async fn subscribe_returns_a_200_for_valid_form_data() {
     // Arrange
-    let port: u16 = 8081;
-    spawn_app(port).await;
     // Perform HTTP requests against our application, using reqwest with retry.
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
     let client = ClientBuilder::new(reqwest::Client::new())
@@ -39,7 +70,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
     // Act
     let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
     let response = client
-        .post(&format!("http://127.0.0.1:{port}/subscriptions"))
+        .post(&format!("http://127.0.0.1:{PORT}/subscriptions"))
         .header("Content-Type", "application/x-www-form-urlencoded")
         .body(body)
         .send()
@@ -52,8 +83,6 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
 #[tokio::test]
 async fn subscribe_returns_a_400_when_data_is_missing() {
     // Arrange
-    let port: u16 = 8082;
-    spawn_app(port).await;
     // Perform HTTP requests against our application, using reqwest with retry.
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
     let client = ClientBuilder::new(reqwest::Client::new())
@@ -68,7 +97,7 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
     ];
     for (invalid_body, error_message) in test_cases {
         let response = client
-            .post(&format!("http://127.0.0.1:{port}/subscriptions"))
+            .post(&format!("http://127.0.0.1:{PORT}/subscriptions"))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(invalid_body)
             .send()
@@ -86,14 +115,4 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
         );
         assert_eq!(400, response.status().as_u16());
     }
-}
-
-// Launch our application in the background ~somehow~
-async fn spawn_app(port: u16) {
-    let config = Config {
-        port,
-        ..Config::debug_default()
-    };
-    let rocket = run().configure(&config).ignite().await.unwrap();
-    let _ = tokio::spawn(rocket.launch());
 }
