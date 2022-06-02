@@ -20,6 +20,8 @@ name = "zero2prod"
 rocket = "0.5.0-rc.2"                  # Web framework for nightly with a focus on ease-of-use, expressibility, and speed.
 
 [dev-dependencies]
+ctor = "0.1.22"                     # __attribute__((constructor)) for Rust
+lazy_static = "1.4.0"            # A macro for declaring lazily evaluated statics in Rust.
 tokio = "1.18.2"                  # An event-driven, non-blocking I/O platform for writing asynchronous I/O backed applications. 
 tokio-test = "0.4.2"                # Testing utilities for Tokio- and futures-based code 
 reqwest = "0.11.10"                               # higher level HTTP client library
