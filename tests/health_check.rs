@@ -26,16 +26,17 @@ struct Subscription {
 }
 
 async fn clear_tables() {
-    let pool = SqlitePoolOptions::new()
+    if let Ok(pool) = SqlitePoolOptions::new()
         .max_connections(1)
         .connect("sqlite://database.sqlite")
         .await
-        .expect("Failed to connect");
-    let result = sqlx::query("DELETE FROM subscriptions")
-        .execute(&pool)
-        .await
-        .expect("Failed to fetch saved subscription.");
-    println!("{result:?}");
+    {
+        let result = sqlx::query("DELETE FROM subscriptions")
+            .execute(&pool)
+            .await
+            .expect("Failed to fetch saved subscription.");
+        println!("{result:?}");
+    }
 }
 
 #[ctor]
