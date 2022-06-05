@@ -39,6 +39,14 @@ async fn clear_tables() {
     }
 }
 
+fn client() -> reqwest_middleware::ClientWithMiddleware {
+    // Perform HTTP requests against our application, using reqwest with retry.
+    let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
+    ClientBuilder::new(reqwest::Client::new())
+        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+        .build()
+}
+
 #[ctor]
 async fn spawn_rocket() {
     block_on(clear_tables());
@@ -65,12 +73,7 @@ fn shutdown_rocket() {
 #[tokio::test]
 async fn health_check_works() {
     // Arrange
-    // Perform HTTP requests against our application, using reqwest with retry.
-    let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
-    let client = ClientBuilder::new(reqwest::Client::new())
-        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-        .build();
-
+    let client = client();
     // Act
     let response = client
         .get(&format!("http://127.0.0.1:{PORT}/health_check"))
@@ -85,11 +88,7 @@ async fn health_check_works() {
 #[tokio::test]
 async fn subscribe_returns_a_200_for_valid_form_data() {
     // Arrange
-    // Perform HTTP requests against our application, using reqwest with retry.
-    let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
-    let client = ClientBuilder::new(reqwest::Client::new())
-        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-        .build();
+    let client = client();
 
     // Act
     let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
@@ -100,6 +99,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
         .send()
         .await
         .expect("Failed to execute request.");
+
     // Assert
     assert_eq!(200, response.status().as_u16());
 
@@ -119,11 +119,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
 #[tokio::test]
 async fn subscribe_returns_a_400_when_data_is_missing() {
     // Arrange
-    // Perform HTTP requests against our application, using reqwest with retry.
-    let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
-    let client = ClientBuilder::new(reqwest::Client::new())
-        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-        .build();
+    let client = client();
 
     // Act
     let test_cases = vec![
