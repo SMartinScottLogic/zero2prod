@@ -9,7 +9,7 @@ use rocket::{Build, Request, Rocket};
 
 use rocket_db_pools::{sqlx, Connection, Database};
 
-use chrono::{SecondsFormat, Utc};
+use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
 #[macro_use]
@@ -52,13 +52,17 @@ struct FormData<'r> {
 #[post("/subscriptions", data = "<form>")]
 async fn subscribe(form: Form<FormData<'_>>, mut db: Connection<Data>) -> Status {
     println!("{} {}", form.name, form.email);
+    let start = SystemTime::now();
+    let since_the_epoch = start
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
     match sqlx::query(
         r#"INSERT INTO subscriptions (id, email, name, subscribed_at) VALUES ($1, $2, $3, $4)"#,
     )
     .bind(Uuid::new_v4().to_string())
     .bind(form.email)
     .bind(form.name)
-    .bind(Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true))
+    .bind(since_the_epoch.as_millis().to_string())
     // We use `get_ref` to get an immutable reference to the `PgConnection`
     // wrapped by `web::Data`.
     .execute(&mut *db)
