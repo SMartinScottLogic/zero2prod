@@ -2,6 +2,7 @@
 extern crate lazy_static;
 
 use tokio_test::block_on;
+use tracing::debug;
 
 use std::{
     process::Child,
@@ -31,11 +32,10 @@ async fn clear_tables() {
         .connect("sqlite://database.sqlite")
         .await
     {
-        let result = sqlx::query("DELETE FROM subscriptions")
+        sqlx::query("DELETE FROM subscriptions")
             .execute(&pool)
             .await
             .expect("Failed to fetch saved subscription.");
-        println!("{result:?}");
     }
 }
 
@@ -50,7 +50,7 @@ fn client() -> reqwest_middleware::ClientWithMiddleware {
 #[ctor]
 async fn spawn_rocket() {
     block_on(clear_tables());
-    println!("spawn rocket");
+    debug!("spawn rocket");
     let root = std::env::current_exe().unwrap();
     let mut root = root.parent().expect("executable's directory").to_path_buf();
     if root.ends_with("deps") {
