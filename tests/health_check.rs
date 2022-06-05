@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate lazy_static;
 
+use tokio_test::block_on;
+
 use std::{
     process::Child,
     sync::{Arc, Mutex},
@@ -9,16 +11,37 @@ use std::{
 use ctor::{ctor, dtor};
 use reqwest_middleware::ClientBuilder;
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
+use sqlx::sqlite::SqlitePoolOptions;
 
 static PORT: u16 = 8080;
 
 lazy_static! {
-    static ref APP: Arc<Mutex<Option<Child>>> = { Arc::new(Mutex::new(None)) };
+    static ref APP: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(None));
+}
+
+#[derive(Debug, sqlx::FromRow)]
+struct Subscription {
+    email: String,
+    name: String,
+}
+
+async fn clear_tables() {
+    let pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect("sqlite://database.sqlite")
+        .await
+        .expect("Failed to connect");
+    let result = sqlx::query("DELETE FROM subscriptions")
+        .execute(&pool)
+        .await
+        .expect("Failed to fetch saved subscription.");
+    println!("{result:?}");
 }
 
 #[ctor]
-fn spawn_rocket() {
-    println!("span rocket");
+async fn spawn_rocket() {
+    block_on(clear_tables());
+    println!("spawn rocket");
     let root = std::env::current_exe().unwrap();
     let mut root = root.parent().expect("executable's directory").to_path_buf();
     if root.ends_with("deps") {
@@ -78,6 +101,18 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
         .expect("Failed to execute request.");
     // Assert
     assert_eq!(200, response.status().as_u16());
+
+    let pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect("sqlite://database.sqlite")
+        .await
+        .unwrap();
+    let saved = sqlx::query_as::<_, Subscription>("SELECT email, name FROM subscriptions")
+        .fetch_one(&pool)
+        .await
+        .expect("Failed to fetch saved subscription.");
+    assert_eq!(saved.email, "ursula_le_guin@gmail.com");
+    assert_eq!(saved.name, "le guin");
 }
 
 #[tokio::test]
