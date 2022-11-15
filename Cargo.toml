@@ -24,7 +24,7 @@ tracing-bunyan-formatter = "0.3"
 
 rocket = "0.5.0-rc.2"                  # Web framework for nightly with a focus on ease-of-use, expressibility, and speed.
 rocket_db_pools = { version = "0.1.0-rc.2", features = ["sqlx_sqlite"]}
-uuid = { version = "1.1.1", features = ["v4"] }
+uuid = { version = "1.2.2", features = ["v4"] }
 sqlx = { version = "0.5.13", features = ["macros"]}
 
 [dev-dependencies]
