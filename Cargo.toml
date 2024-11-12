@@ -33,6 +33,6 @@ lazy_static = "1.4.0"            # A macro for declaring lazily evaluated static
 tokio = "1.28.2"                  # An event-driven, non-blocking I/O platform for writing asynchronous I/O backed applications. 
 tokio-test = "0.4.2"                # Testing utilities for Tokio- and futures-based code 
 reqwest = "0.11"                               # higher level HTTP client library
-reqwest-middleware = "0.2"                      # Wrapper around reqwest to allow for client middleware chains.
+reqwest-middleware = "0.4"                      # Wrapper around reqwest to allow for client middleware chains.
 reqwest-retry = "0.2"         # Retry middleware for reqwest.
 futures = "0.3"                # An implementation of futures and streams featuring zero allocations, composability, and itera…
